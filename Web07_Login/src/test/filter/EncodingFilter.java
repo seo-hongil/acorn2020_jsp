@@ -42,4 +42,5 @@ public class EncodingFilter implements Filter{
 		//web.xml 문서에 있는 내용을 읽어서 필드에 저장한다
 		encoding=filterConfig.getInitParameter("encoding");
 	}
+
 }
