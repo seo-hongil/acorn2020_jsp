@@ -1,5 +1,3 @@
-<%@page import="test.file.dao.FileDao"%>
-<%@page import="test.file.dto.FileDto"%>
 <%@page import="java.util.Map"%>
 <%@page import="org.apache.commons.fileupload.FileItem"%>
 <%@page import="java.util.List"%>
@@ -46,8 +44,10 @@
     //전송된 파라미터의 한글 인코딩 설정 
     upload.setHeaderEncoding("utf-8");
     
-    //작업 성공여부
-    boolean isSuccess=false;
+    //폼 전송된 title
+  	String title="";
+    //WebContent 안에서 이미지 파일이 저장된 경로 
+  	String imageSrc="";
     
     try {
         //폼전송된 아이템 목록 얻어오기 
@@ -55,12 +55,6 @@
         //폼전송된 아이템이 존재 한다면 
         if (formItems != null && formItems.size() > 0) {
         	
-        	//파일 정보를 담을 Dto 객체 생성
-        	FileDto dto=new FileDto();
-        	
-        	//로그인된 아이디(파일의 작성자)
-        	String id=(String)session.getAttribute("id");
-        	dto.setWriter(id);
         	
             //반복문 돌면서 FileItem 객체를 불러온다. 
             for (FileItem item : formItems) {
@@ -78,24 +72,21 @@
                     File storeFile = new File(filePath);
                     item.write(storeFile);
                     
-                    //원본 파일명과 저장된 파일명을 FileDto 객체에 담는다.
-                   	dto.setOrgFileName(orgFileName);
-                   	dto.setSaveFileName(saveFileName);
-                   	//파일 사이즈도 담는다
-                   	dto.setFileSize(item.getSize());
+                    //이미지 경로
+                    imageSrc="/upload/"+saveFileName;
                     
                 }else{//폼 필드라면 
-                
+                	
+                	// input name="title" 에 입력한 문자열 읽어오는 부분 2
                 	if(item.getFieldName().equals("title")){
                 		//제목 읽어오기
-                		String title=item.getString("utf-8");
-                		dto.setTitle(title);
+                		title=item.getString("utf-8");
+                		
                 	}
                 
                 }//if
             }//for
-            //DB 에 파일 정보를 저장한다.
-            isSuccess=FileDao.getInstance().insert(dto);
+            
         }//if
         
     } catch (Exception ex) {
@@ -108,15 +99,12 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>/file/private/upload.jsp</title>
+<title>/gallery/test_upload.jsp</title>
 </head>
 <body>
 <div class="container">
-	<%if(isSuccess){ %>
-		<p>파일을 업로드 했습니다 <a href="../list.jsp">확인</a></p>
-	<%}else{ %>
-		<p>파일 업로드 실패! <a href="upload_form.jsp">다시 시도</a></p>
-	<%} %>
+	<h1><%=title %></h1>
+	<img src="${pageContext.request.contextPath }<%=imageSrc %>"/>
 </div>
 </body>
 </html>
