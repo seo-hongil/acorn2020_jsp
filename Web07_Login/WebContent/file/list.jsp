@@ -1,3 +1,4 @@
+<%@page import="java.net.URLEncoder"%>
 <%@page import="test.file.dao.FileDao"%>
 <%@page import="java.util.List"%>
 <%@page import="test.file.dto.FileDto"%>
@@ -52,9 +53,48 @@
 	int startRowNum=1+(pageNum-1)*PAGE_ROW_COUNT;
 	//보여줄 페이지 데이터의 끝 ResultSet row 번호
 	int endRowNum=pageNum*PAGE_ROW_COUNT;
-	
-	//전체 row 의 갯수를 읽어온다.
-	int totalRow=FileDao.getInstance().getCount();
+	/*
+		검색 키워드에 관련된 처리 
+	*/
+	String keyword=request.getParameter("keyword");
+	if(keyword==null){//전달된 키워드가 없다면 
+		keyword=""; //빈 문자열을 넣어준다. 
+	}
+	//인코딩된 키워드를 미리 만들어 둔다. 
+	String encodedK=URLEncoder.encode(keyword);
+	String condition=request.getParameter("condition");
+	//검색 키워드와 startRowNum, endRowNum 을 담을 FileDto 객체 생성
+	FileDto dto=new FileDto();
+	dto.setStartRowNum(startRowNum);
+	dto.setEndRowNum(endRowNum);
+	//select 된 결과를 담을 List
+	List<FileDto> list=null;
+	//전체 row 의 갯수를 담을 변수 
+	int totalRow=0;
+	if(!keyword.equals("")){ //만일 키워드가 넘어온다면 
+		if(condition.equals("title_filename")){
+			//검색 키워드를 FileDto 객체의 필드에 담는다. 
+			dto.setTitle(keyword);
+			dto.setOrgFileName(keyword);
+			//검색 키워드에 맞는 파일 목록 중에서 pageNum 에 해당하는 목록 얻어오기
+			list=FileDao.getInstance().getListTF(dto);
+			//검색 키워드에 맞는 전체 글의 갯수를 얻어온다. 
+			totalRow=FileDao.getInstance().getCountTF(dto);
+		}else if(condition.equals("title")){
+			dto.setTitle(keyword);
+			list=FileDao.getInstance().getListT(dto);
+			totalRow=FileDao.getInstance().getCountT(dto);
+		}else if(condition.equals("writer")){
+			dto.setWriter(keyword);
+			list=FileDao.getInstance().getListW(dto);
+			totalRow=FileDao.getInstance().getCountW(dto);
+		}
+	}else{//검색 키워드가 없으면 전체 목록을 얻어온다.
+		condition="";
+		keyword="";
+		list=FileDao.getInstance().getList(dto);
+		totalRow=FileDao.getInstance().getCount();
+	}	
 	//전체 페이지의 갯수 구하기
 	int totalPageCount=
 			(int)Math.ceil(totalRow/(double)PAGE_ROW_COUNT);
@@ -67,13 +107,6 @@
 	if(totalPageCount < endPageNum){
 		endPageNum=totalPageCount; //보정해준다. 
 	}
-	//startRowNum 과 endRowNum을 FileDto 객체에 담고 
-	FileDto dto=new FileDto();
-	dto.setStartRowNum(startRowNum);
-	dto.setEndRowNum(endRowNum);
-	//FileDto 객체를 인자로 전달해서 파일 목록을 얻어온다. 
-	List<FileDto> list=FileDao.getInstance().getList(dto);
-	
 %>
 <div class="container">
 	<a href="private/upload_form.jsp">파일 업로드</a>
@@ -111,21 +144,31 @@
 	<div class="page-display">
 		<ul>
 		<%if(startPageNum != 1){ %>
-			<li><a href="list.jsp?pageNum=<%=startPageNum-1 %>">Prev</a></li>
+			<li><a href="list.jsp?pageNum=<%=startPageNum-1 %>&condition=<%=condition %>&keyword=<%=encodedK %>">Prev</a></li>
 		<%} %>
 		<%for(int i=startPageNum; i<=endPageNum; i++){ %>
 			<%if(i==pageNum){ %>
-				<li class="active"><a href="list.jsp?pageNum=<%=i %>"><%=i %></a></li>
+				<li class="active"><a href="list.jsp?pageNum=<%=i %>&condition=<%=condition %>&keyword=<%=encodedK %>"><%=i %></a></li>
 			<%}else{%>
-				<li><a href="list.jsp?pageNum=<%=i %>"><%=i %></a></li>
+				<li><a href="list.jsp?pageNum=<%=i %>&condition=<%=condition %>&keyword=<%=encodedK %>"><%=i %></a></li>
 			<%} %>
 		<%} %>	
 		<%if(endPageNum < totalPageCount){ %>
-			<li><a href="list.jsp?pageNum=<%=endPageNum+1 %>">Next</a></li>
+			<li><a href="list.jsp?pageNum=<%=endPageNum+1 %>&condition=<%=condition %>&keyword=<%=encodedK %>">Next</a></li>
 		<%} %>
 		</ul>
 	</div>
-	
+	<hr style="clear:left;"/>
+	<form action="list.jsp" method="get">
+		<label for="condition">검색조건</label>
+		<select name="condition" id="condition">
+			<option value="title_filename" <%if(condition.equals("title_filename")){ %>selected<%} %>>제목+파일명</option>
+			<option value="title" <%if(condition.equals("title")){ %>selected<%} %>>제목</option>
+			<option value="writer" <%if(condition.equals("writer")){ %>selected<%} %>>작성자</option>
+		</select>
+		<input value="<%=keyword %>" type="text" name="keyword" placeholder="검색어..."/>
+		<button type="submit">검색</button>
+	</form>
 </div>
 </body>
 </html>
