@@ -31,7 +31,7 @@
 			}
 		});
 		
-		return false;;//폼 전송을 강제로 막아버리기
+		return false;//폼 전송을 강제로 막아버리기
 	});
 	
 </script>
