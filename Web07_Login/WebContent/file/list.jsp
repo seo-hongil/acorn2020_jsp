@@ -4,31 +4,14 @@
 <%@page import="test.file.dto.FileDto"%>
 <%@ page language="java" contentType="text/html; charset=UTF-8"
     pageEncoding="UTF-8"%>
+<%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>    
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <title>/file/list.jsp</title>
-<style>
-	.page-display a{
-		text-decoration: none;
-		color: #000;
-	}
-	.page-display ul li{
-		float: left;  /* 가로로 쌓이게 */
-		list-style-type: none; /* disc 사라지게 */
-		margin-right: 10px; /* 오른쪽 마진 */
-	}
-	
-	.page-display ul li.active{/* li 요소 이면서 active 클래스를 가지고 있는 요소 */
-		text-decoration: underline;
-		font-weight: bold;
-	}
-	
-	.page-display ul li.active a{
-		color:red;
-	}
-</style>
+<link rel="stylesheet" href="${pageContext.request.contextPath }/css/bootstrap.css" />
 </head>
 <body>
 <% 
@@ -56,13 +39,15 @@
 	/*
 		검색 키워드에 관련된 처리 
 	*/
-	String keyword=request.getParameter("keyword");
+	String keyword=request.getParameter("keyword"); //검색 키워드
+	String condition=request.getParameter("condition"); //검색 조건
 	if(keyword==null){//전달된 키워드가 없다면 
 		keyword=""; //빈 문자열을 넣어준다. 
+		condition="";
 	}
 	//인코딩된 키워드를 미리 만들어 둔다. 
 	String encodedK=URLEncoder.encode(keyword);
-	String condition=request.getParameter("condition");
+	
 	//검색 키워드와 startRowNum, endRowNum 을 담을 FileDto 객체 생성
 	FileDto dto=new FileDto();
 	dto.setStartRowNum(startRowNum);
@@ -90,8 +75,6 @@
 			totalRow=FileDao.getInstance().getCountW(dto);
 		}
 	}else{//검색 키워드가 없으면 전체 목록을 얻어온다.
-		condition="";
-		keyword="";
 		list=FileDao.getInstance().getList(dto);
 		totalRow=FileDao.getInstance().getCount();
 	}	
@@ -107,12 +90,22 @@
 	if(totalPageCount < endPageNum){
 		endPageNum=totalPageCount; //보정해준다. 
 	}
+	
+	//EL 에서 사용할 값을 미리 request 에 담아두기
+	request.setAttribute("list", list);
+	request.setAttribute("startPageNum", startPageNum);
+	request.setAttribute("endPageNum", endPageNum);
+	request.setAttribute("pageNum", pageNum);
+	request.setAttribute("totalPageCount", totalPageCount);
+	request.setAttribute("condition", condition);
+	request.setAttribute("keyword", keyword);
+	request.setAttribute("encodedK", encodedK);
 %>
 <div class="container">
 	<a href="private/upload_form.jsp">파일 업로드</a>
 	<h1>파일 목록입니다.</h1>
-	<table>
-		<thead>
+	<table class="table table-striped table-sm">
+		<thead class="thead-dark">
 			<tr>
 				<th>번호</th>
 				<th>작성자</th>
@@ -124,49 +117,52 @@
 			</tr>
 		</thead>
 		<tbody>
-		<%for(FileDto tmp:list){%>
+		<c:forEach var="tmp" items="${list }">
 			<tr>
-				<td><%=tmp.getNum() %></td>
-				<td><%=tmp.getWriter() %></td>
-				<td><%=tmp.getTitle() %></td>
-				<td><a href="download.jsp?num=<%=tmp.getNum() %>"><%=tmp.getOrgFileName() %></a></td>
-				<td><%=tmp.getFileSize() %></td>
-				<td><%=tmp.getRegdate() %></td>
+				<td>${tmp.num }</td>
+				<td>${tmp.writer }</td>
+				<td>${tmp.title }</td>
+				<td><a href="download.jsp?num=${tmp.num }">${tmp.orgFileName }</a></td>
+				<td><fmt:formatNumber value="${tmp.fileSize }" pattern="#,###"/> byte</td>
+				<td>${tmp.regdate }</td>
 				<td>
-					<%if(tmp.getWriter().equals(id)){ %>
-						<a href="private/delete.jsp?num=<%=tmp.getNum() %>">삭제</a>
-					<%} %>
+					<c:if test="${tmp.writer eq id }">
+						<a href="private/delete.jsp?num=${tmp.num }">삭제</a>
+					</c:if>
 				</td>
 			</tr>
-		<%} %>
+		</c:forEach>
 		</tbody>
 	</table>
 	<div class="page-display">
-		<ul>
-		<%if(startPageNum != 1){ %>
-			<li><a href="list.jsp?pageNum=<%=startPageNum-1 %>&condition=<%=condition %>&keyword=<%=encodedK %>">Prev</a></li>
-		<%} %>
-		<%for(int i=startPageNum; i<=endPageNum; i++){ %>
-			<%if(i==pageNum){ %>
-				<li class="active"><a href="list.jsp?pageNum=<%=i %>&condition=<%=condition %>&keyword=<%=encodedK %>"><%=i %></a></li>
-			<%}else{%>
-				<li><a href="list.jsp?pageNum=<%=i %>&condition=<%=condition %>&keyword=<%=encodedK %>"><%=i %></a></li>
-			<%} %>
-		<%} %>	
-		<%if(endPageNum < totalPageCount){ %>
-			<li><a href="list.jsp?pageNum=<%=endPageNum+1 %>&condition=<%=condition %>&keyword=<%=encodedK %>">Next</a></li>
-		<%} %>
+		<ul class="pagination pagination-sm">
+		<c:if test="${startPageNum ne 1 }">
+			<li class="page-item"><a class="page-link" href="list.jsp?pageNum=${startPageNum-1 }&condition=${condition }&keyword=${encodedK }">Prev</a></li>
+		</c:if>
+		<c:forEach var="i" begin="${startPageNum }" end="${endPageNum }">
+			<c:choose>
+				<c:when test="${i eq pageNum }">
+					<li class="page-item active"><a class="page-link" href="list.jsp?pageNum=${i }&condition=${condition }&keyword=${encodedK }">${i }</a></li>
+				</c:when>
+				<c:otherwise>
+					<li class="page-item"><a class="page-link" href="list.jsp?pageNum=${i }&condition=${condition }&keyword=${encodedK }">${i }</a></li>
+				</c:otherwise>
+			</c:choose>
+		</c:forEach>
+		<c:if test="${endPageNum lt totalPageCount }">
+			<li class="page-item"><a class="page-link" href="list.jsp?pageNum=${endPageNum+1 }&condition=${condition }&keyword=${encodedK }">Next</a></li>
+		</c:if>
 		</ul>
 	</div>
 	<hr style="clear:left;"/>
 	<form action="list.jsp" method="get">
 		<label for="condition">검색조건</label>
 		<select name="condition" id="condition">
-			<option value="title_filename" <%if(condition.equals("title_filename")){ %>selected<%} %>>제목+파일명</option>
-			<option value="title" <%if(condition.equals("title")){ %>selected<%} %>>제목</option>
-			<option value="writer" <%if(condition.equals("writer")){ %>selected<%} %>>작성자</option>
+			<option value="title_filename" <c:if test="${condition eq 'title_filename' }">selected</c:if>>제목+파일명</option>
+			<option value="title" <c:if test="${condition eq 'title' }">selected</c:if>>제목</option>
+			<option value="writer" <c:if test="${condition eq 'writer' }">selected</c:if>>작성자</option>
 		</select>
-		<input value="<%=keyword %>" type="text" name="keyword" placeholder="검색어..."/>
+		<input value="${keyword }" type="text" name="keyword" placeholder="검색어..."/>
 		<button type="submit">검색</button>
 	</form>
 </div>

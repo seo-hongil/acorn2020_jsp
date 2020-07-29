@@ -26,6 +26,7 @@
 	</form>
 </div>
 <script src="${pageContext.request.contextPath }/js/jquery-3.5.1.js"></script>
+
 <script>
 	//id 가 myForm  인 곳에 submit 이벤트가 일어 났을때 실행할 함수 등록 
 	$("#myForm").on("submit", function(){
